@@ -24,6 +24,18 @@ is the unmodified original; every change since then is in the git history.
 - Removed: DVD, NTFS, NAND-image and SD Gecko support (their libraries no longer build).
 - Builds with current devkitPPC/libogc (compatibility layer for the removed `diropen` API).
 
+- **Exits cleanly** (br8): each exit step is shown on screen and appended to `sd:/ftpiibr_saida.txt`,
+  the network and Wii Remotes are shut down, the SD card is unmounted last, and the app returns to the
+  Homebrew Channel (or to the Wii Menu when started from a channel).
+
+## PC tools and field notes
+
+- [`tools/`](tools/README.md): Python scripts for the PC side, to find the Wii and copy files, extract a
+  file from a game on the Wii's USB drive over FTP, and capture what an online game does on the network.
+- [`docs/NOTES.md`](docs/NOTES.md): what we found getting a Wii fully working in 2026, including Mario Kart
+  Wii online through WiiFlow when USB Loader GX hangs at "Connecting", Wiimmfi error 23917, WiiFlow cover
+  crashes and Wii Menu freezes with forwarder channels (English, with a Portuguese summary).
+
 ## Usage
 
 Copy `apps/ftpiibr` to the SD card and start it from the Homebrew Channel. To set a password, rename
