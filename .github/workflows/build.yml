@@ -16,3 +16,7 @@ jobs:
         with:
           name: ftpii-br
           path: pkg
+      - name: Symbolize crash addresses (debug/addrs.txt)
+        if: hashFiles('debug/addrs.txt') != ''
+        run: |
+          /opt/devkitpro/devkitPPC/bin/powerpc-eabi-addr2line -f -i -C -e build/_ftpii.elf $(cat debug/addrs.txt)
