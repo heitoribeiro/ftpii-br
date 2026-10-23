@@ -8,6 +8,8 @@
 //  - Bilingual (PT/EN) log messages.
 #include <fat.h>
 #include <malloc.h>
+#include <ogc/ipc.h>
+#include <ogc/isfs.h>
 #include <ogc/lwp_watchdog.h>
 #include <ogc/usbstorage.h>
 #include <sdcard/wiisd_io.h>
