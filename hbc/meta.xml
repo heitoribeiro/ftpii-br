@@ -2,7 +2,7 @@
 <app version="1">
   <name>ftpii BR</name>
   <coder>joedj, modificado por heitoribeiro</coder>
-  <version>0.0.22-br6</version>
+  <version>0.0.22-br7</version>
   <release_date>20261023120000</release_date>
   <short_description>Servidor FTP / FTP server (PT/EN)</short_description>
   <long_description>Versao modificada do ftpii 0.0.22 (Joseph Jordan, GPLv2). / Modified version of ftpii 0.0.22.

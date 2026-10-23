@@ -1,7 +1,8 @@
 // Copyright 2010 Joseph Jordan <joe.ftpii@psychlaw.com.au>
 // This code is licensed to you under the terms of the GNU GPL, version 2;
 // see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
-// Modified 2026 for ftpii BR: colons are allowed in file names (some Wii saves use them).
+// Modified 2026 for ftpii BR: colons are allowed in file names (some Wii saves use them), and
+// SD/USB operations are retried while a sleeping hard drive spins up.
 #include <errno.h>
 #include <malloc.h>
 #include <stdarg.h>
@@ -15,6 +16,8 @@
 #include "vrt.h"
 
 static const u32 VRT_DEVICE_ID = 38744;
+#define STORAGE_RETRIES 4
+#define STORAGE_RETRY_USECS 1500000
 
 static char *virtual_abspath(char *virtual_cwd, char *virtual_path) {
     char *path;
@@ -154,15 +157,23 @@ static void *with_virtual_path(void *virtual_cwd, void *void_f, char *virtual_pa
     } while (1);
     va_end(ap);
     
-    void *result;
-    switch (num_args) {
-        case 0: result = f(path); break;
-        case 1: result = f(path, args[0]); break;
-        case 2: result = f(path, args[0], args[1]); break;
-        case 3: result = f(path, args[0], args[1], args[2]); break;
-        default: result = (void *)failed;
+    // An external hard drive that has spun down answers "not ready" (ENODEV/EIO from the FAT
+    // driver) to the first request after a pause; give it time to spin up instead of failing.
+    bool storage = !strncmp(path, "usb:", 4) || !strncmp(path, "sd:", 3);
+    void *result = (void *)failed;
+    u32 attempt;
+    for (attempt = 0; attempt < STORAGE_RETRIES; attempt++) {
+        switch (num_args) {
+            case 0: result = f(path); break;
+            case 1: result = f(path, args[0]); break;
+            case 2: result = f(path, args[0], args[1]); break;
+            case 3: result = f(path, args[0], args[1], args[2]); break;
+            default: result = (void *)failed;
+        }
+        if (result != (void *)failed || !storage || (errno != ENODEV && errno != EIO)) break;
+        usleep(STORAGE_RETRY_USECS);
     }
-    
+
     free(path);
     return result;
 }

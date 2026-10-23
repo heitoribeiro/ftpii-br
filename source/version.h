@@ -2,7 +2,7 @@
 #ifndef _VERSION_H_
 #define _VERSION_H_
 
-#define FTPII_BR_VERSION "0.0.22-br6"
+#define FTPII_BR_VERSION "0.0.22-br7"
 #define FTPII_BR_NAME "ftpii BR " FTPII_BR_VERSION
 
 #endif /* _VERSION_H_ */
