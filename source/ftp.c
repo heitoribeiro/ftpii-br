@@ -64,6 +64,8 @@ struct client_struct {
     void (*data_connection_cleanup)(void *arg);
     u64 data_connection_timer;
     u64 last_activity;
+    bool quitting;
+    u64 quit_deadline;
 };
 
 typedef struct client_struct client_t;
@@ -795,6 +797,8 @@ static bool process_accept_events(s32 server) {
         client->data_connection_cleanup = NULL;
         client->data_connection_timer = 0;
         client->last_activity = gettime();
+        client->quitting = false;
+        client->quit_deadline = 0;
         memcpy(&client->address, &client_address, sizeof(client_address));
         int client_index;
         if (write_reply(client, 220, FTPII_BR_NAME) < 0) {
@@ -860,8 +864,25 @@ static void process_data_events(client_t *client) {
     }
 }
 
+#define QUIT_LINGER_SECS 5
+
+/*
+    After QUIT, wait (briefly) for the client to close first. Whichever side closes first keeps the
+    connection in TIME_WAIT, and the Wii's network stack has very few slots for those: when many
+    connections close on the Wii side in a short time, it stops accepting new ones for minutes.
+*/
+static bool process_quitting_client(client_t *client) {
+    if (!client->quitting) return false;
+    char discard[64];
+    s32 bytes_read = net_read(client->socket, discard, sizeof(discard));
+    if (bytes_read == 0 || (bytes_read < 0 && bytes_read != -EAGAIN) || gettime() > client->quit_deadline)
+        cleanup_client(client);
+    return true;
+}
+
 static void process_control_events(client_t *client) {
     s32 bytes_read;
+    if (process_quitting_client(client)) return;
     while (client->offset < (FTP_BUFFER_SIZE - 1)) {
         if (client->data_callback) {
             return;
@@ -869,7 +890,7 @@ static void process_control_events(client_t *client) {
         char *offset_buf = client->buf + client->offset;
         if ((bytes_read = net_read(client->socket, offset_buf, FTP_BUFFER_SIZE - 1 - client->offset)) < 0) {
             if (bytes_read != -EAGAIN) {
-                printf("Read error %i occurred, closing client.\n", bytes_read);
+                printf("Conexao encerrada pelo cliente / Connection reset (%i)\n", bytes_read);
                 goto recv_loop_end;
             }
             return;
@@ -897,7 +918,11 @@ static void process_control_events(client_t *client) {
             if (*next) {
                 s32 result;
                 if ((result = process_command(client, next)) < 0) {
-                    if (result != -EQUIT) {
+                    if (result == -EQUIT) {
+                        client->quitting = true;
+                        client->quit_deadline = gettime() + secs_to_ticks(QUIT_LINGER_SECS);
+                        return;
+                    } else {
                         printf("Closing connection due to error while processing command: %s\n", next);
                     }
                     goto recv_loop_end;
