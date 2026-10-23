@@ -18,6 +18,7 @@
 #include <unistd.h>
 
 #include "compat.h"
+#include "diag.h"
 #include "fs.h"
 #include "isfs.h"
 #include "otp.h"
@@ -147,8 +148,9 @@ void remount_storage() {
 void initialise_fs() {
     OTP_Mount();
     SEEPROM_Mount();
-    ISFS_SU();
-    if (ISFS_Initialize() == IPC_OK) mount(PA_ISFS);
+    diag.es_identify = ISFS_SU();
+    diag.isfs_initialize = ISFS_Initialize();
+    if (diag.isfs_initialize == IPC_OK) diag.isfs_mounted = mount(PA_ISFS);
 
     mount(PA_SD);
     // Hard drives can take several seconds to spin up after the console boots.

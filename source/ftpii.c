@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <wiiuse/wpad.h>
 
+#include "diag.h"
 #include "ftp.h"
 #include "fs.h"
 #include "iospatch.h"
@@ -19,6 +20,8 @@
 #include "reset.h"
 #include "ui.h"
 #include "version.h"
+
+diag_t diag;
 
 static const u16 PORT = 21;
 static const char *APP_DIR_PREFIXES[] = { "ftpiibr_", "ftpii_", NULL };
@@ -57,7 +60,10 @@ static void initialise_ftpii(int argc, char **argv) {
     ui_init();
     ui_set_password(NULL);
     // Runtime-only patch (gone after power off) that lets this IOS read the NAND, as in ftpii 0.0.22.
-    IOSPATCH_Apply();
+    diag.ios_version = IOS_GetVersion();
+    diag.ios_revision = IOS_GetRevision();
+    diag.ahbprot = *(vu32 *)0xcd800064 == 0xffffffff;
+    diag.patches_applied = IOSPATCH_Apply();
     printf("%s (IOS %i)\n", FTPII_BR_NAME, IOS_GetVersion());
     if (argc > 1) set_ftp_password(argv[1]);
     else if (argc == 1) set_password_from_executable(argv[0]);

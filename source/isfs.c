@@ -13,6 +13,7 @@
 #include <sys/iosupport.h>
 
 #include "isfs.h"
+#include "diag.h"
 
 #define DEVICE_NAME "isfs"
 
@@ -326,7 +327,9 @@ static DIR_ENTRY *add_child_entry(DIR_ENTRY *dir, const char *name) {
 static bool read_recursive(DIR_ENTRY *parent) {
     u32 fileCount;
     s32 ret = ISFS_ReadDir(parent->abspath, NULL, &fileCount);
+    diag.isfs_entries++;
     if (ret != ISFS_OK) {
+        if (ret == ISFS_EACCESS) diag.isfs_unreadable_dirs++;
         s32 fd = ISFS_Open(parent->abspath, ISFS_OPEN_READ);
         if (fd >= 0) {
             static fstats st __attribute__((aligned(32)));

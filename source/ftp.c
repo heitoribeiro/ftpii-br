@@ -20,6 +20,7 @@
 #include <unistd.h>
 
 #include "compat.h"
+#include "diag.h"
 #include "ftp.h"
 #include "fs.h"
 #include "loader.h"
@@ -566,6 +567,37 @@ static s32 ftp_SITE_UNMOUNT(client_t *client, char *path) {
     return write_reply(client, 250, "Unmounted.");
 }
 
+static s32 ftp_SITE_INFO(client_t *client, char *rest) {
+    char text[640];
+    snprintf(text, sizeof(text),
+        "211-%s
+"
+        " IOS: %d rev %d
+"
+        " AHBPROT: %s
+"
+        " IOS patches applied: %u
+"
+        " ES_Identify: %d
+"
+        " ISFS_Initialize: %d
+"
+        " ISFS mounted: %s, entries: %u, permission-denied dirs: %u
+"
+        " Devices: sd=%s usb=%s
+"
+        " Clients: %u/%u
+"
+        "211 End
+",
+        FTPII_BR_NAME, diag.ios_version, diag.ios_revision, diag.ahbprot ? "yes" : "no",
+        diag.patches_applied, diag.es_identify, diag.isfs_initialize,
+        diag.isfs_mounted ? "yes" : "no", diag.isfs_entries, diag.isfs_unreadable_dirs,
+        mounted(PA_SD) ? "mounted" : "no", mounted(PA_USB) ? "mounted" : "no",
+        num_clients, MAX_CLIENTS);
+    return write_raw(client, text);
+}
+
 static s32 ftp_SITE_UNKNOWN(client_t *client, char *rest) {
     return write_reply(client, 501, "Unknown SITE command.");
 }
@@ -595,8 +627,8 @@ static s32 dispatch_to_handler(client_t *client, char *cmd_line, const char **co
     return handlers[i](client, rest);
 }
 
-static const char *site_commands[] = { "LOADER", "CLEAR", "CHMOD", "PASSWD", "NOPASSWD", "MOUNT", "UNMOUNT", "LOAD", NULL };
-static const ftp_command_handler site_handlers[] = { ftp_SITE_LOADER, ftp_SITE_CLEAR, ftp_SITE_CHMOD, ftp_SITE_PASSWD, ftp_SITE_NOPASSWD, ftp_SITE_MOUNT, ftp_SITE_UNMOUNT, ftp_SITE_LOAD, ftp_SITE_UNKNOWN };
+static const char *site_commands[] = { "LOADER", "CLEAR", "CHMOD", "PASSWD", "NOPASSWD", "MOUNT", "UNMOUNT", "LOAD", "INFO", NULL };
+static const ftp_command_handler site_handlers[] = { ftp_SITE_LOADER, ftp_SITE_CLEAR, ftp_SITE_CHMOD, ftp_SITE_PASSWD, ftp_SITE_NOPASSWD, ftp_SITE_MOUNT, ftp_SITE_UNMOUNT, ftp_SITE_LOAD, ftp_SITE_INFO, ftp_SITE_UNKNOWN };
 
 static s32 ftp_SITE(client_t *client, char *cmd_line) {
     return dispatch_to_handler(client, cmd_line, site_commands, site_handlers);
