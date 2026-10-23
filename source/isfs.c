@@ -329,7 +329,7 @@ static bool read_recursive(DIR_ENTRY *parent) {
     s32 ret = ISFS_ReadDir(parent->abspath, NULL, &fileCount);
     diag.isfs_entries++;
     if (ret != ISFS_OK) {
-        if (ret == ISFS_EACCESS) diag.isfs_unreadable_dirs++;
+        if (ret == -102) diag.isfs_unreadable_dirs++; // ISFS "permission denied"
         s32 fd = ISFS_Open(parent->abspath, ISFS_OPEN_READ);
         if (fd >= 0) {
             static fstats st __attribute__((aligned(32)));
