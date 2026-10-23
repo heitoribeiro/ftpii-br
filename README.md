@@ -8,7 +8,7 @@ is the unmodified original; every change since then is in the git history.
 ## Changes from ftpii 0.0.22
 
 - **No more lockups from abandoned connections.** Control connections idle for 180 s are closed, and
-  when all 8 slots are in use the longest-idle client is evicted. In 0.0.22, clients that disconnected
+  when all 3 slots are in use (the Wii IOS itself stops accepting at 4) the longest-idle client is evicted. In 0.0.22, clients that disconnected
   without `QUIT` (Windows Explorer, scripts that time out) kept the 5 slots forever.
 - **No socket leak.** The passive listening socket is closed after every transfer.
 - **USB storage mounts by itself**, at start-up (waiting up to 12 s for a hard drive to spin up) and when

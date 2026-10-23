@@ -31,7 +31,10 @@
 #include "vrt.h"
 
 #define FTP_BUFFER_SIZE 1024
-#define MAX_CLIENTS 8
+// The Wii IOS accepts at most 4 simultaneous connections on a listening socket and then stops
+// delivering new ones (measured on IOS58 rev 6176). Serving 3 keeps the 4th free, so an extra
+// client is answered and evicted/refused instead of wedging the listener.
+#define MAX_CLIENTS 3
 #define IDLE_TIMEOUT_SECS 180
 #define EVICT_IDLE_SECS 15
 
