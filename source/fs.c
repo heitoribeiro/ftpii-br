@@ -58,6 +58,10 @@ static bool is_fat(VIRTUAL_PARTITION *partition) {
 }
 
 bool mounted(VIRTUAL_PARTITION *partition) {
+    // SD/USB: trust our own state. Probing by opening the root directory (as 0.0.22 did) is called
+    // twice a second by the status screen and by the device checks; a probe that failed while the
+    // disk was busy made the server "remount" a drive in the middle of a transfer.
+    if (is_fat(partition)) return partition->inserted;
     DIR_ITER *dir = diropen(partition->prefix);
     if (dir) {
         dirclose(dir);
@@ -96,6 +100,7 @@ bool unmount(VIRTUAL_PARTITION *partition) {
     bool success = false;
     if (is_fat(partition)) {
         fatUnmount(partition->prefix);
+        partition->inserted = false;
         success = true;
     } else if (partition == PA_ISFS) {
         success = ISFS_Unmount();
