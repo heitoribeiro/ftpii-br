@@ -27,7 +27,7 @@ static const u16 PORT = 21;
 // On hardware the IOS stopped handing new connections to the listening socket after a few
 // simultaneous clients, and it stayed that way after they left. Re-creating the listening socket
 // while nobody is connected brings it back, so do that periodically when idle.
-#define LISTENER_REFRESH_SECS 30
+#define LISTENER_REFRESH_SECS 15
 static const char *APP_DIR_PREFIXES[] = { "ftpiibr_", "ftpii_", NULL };
 
 static void initialise_video() {

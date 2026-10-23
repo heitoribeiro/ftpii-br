@@ -784,7 +784,9 @@ static bool process_accept_events(s32 server) {
 
         if (num_clients == MAX_CLIENTS && !evict_idle_client(gettime())) {
             printf("Limite de %u conexoes / %u clients max, recusado / refused\n", MAX_CLIENTS, MAX_CLIENTS);
-            net_close(peer);
+            static const char busy[] = "421 Too many connections, try again in a few seconds.\r\n";
+            send_exact(peer, (char *)busy, sizeof(busy) - 1);
+            net_close_blocking(peer);
             return true;
         }
 
