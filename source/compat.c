@@ -12,6 +12,18 @@ static const devoptab_t *dir_devoptab(DIR_ITER *dir) {
     return devoptab_list[dir->device];
 }
 
+/*
+    libsysbase stores the device's private data in the reent structure before every devoptab call,
+    and current drivers depend on it (the FatFs-based libfat looks its volume up through it).
+    Calling the devoptab directly without doing the same crashes inside f_opendir.
+*/
+static struct _reent *reent_for(const devoptab_t *dt) {
+    struct _reent *r = _REENT;
+    r->_errno = 0;
+    r->deviceData = dt->deviceData;
+    return r;
+}
+
 DIR_ITER *ftpii_diropen(const char *path) {
     int device = FindDevice(path);
     if (device < 0) {
@@ -35,8 +47,7 @@ DIR_ITER *ftpii_diropen(const char *path) {
         errno = ENOMEM;
         return NULL;
     }
-    struct _reent *r = _REENT;
-    r->_errno = 0;
+    struct _reent *r = reent_for(dt);
     if (!dt->diropen_r(r, dir, path)) {
         errno = r->_errno ? r->_errno : ENOENT;
         free(dir->dirStruct);
@@ -52,8 +63,7 @@ int ftpii_dirnext(DIR_ITER *dir, char *filename, struct stat *st) {
         errno = EBADF;
         return -1;
     }
-    struct _reent *r = _REENT;
-    r->_errno = 0;
+    struct _reent *r = reent_for(dt);
     memset(st, 0, sizeof(*st));
     int ret = dt->dirnext_r(r, dir, filename, st);
     if (ret) errno = r->_errno;
@@ -63,10 +73,7 @@ int ftpii_dirnext(DIR_ITER *dir, char *filename, struct stat *st) {
 int ftpii_dirclose(DIR_ITER *dir) {
     const devoptab_t *dt = dir_devoptab(dir);
     int ret = -1;
-    if (dt && dt->dirclose_r) {
-        struct _reent *r = _REENT;
-        ret = dt->dirclose_r(r, dir);
-    }
+    if (dt && dt->dirclose_r) ret = dt->dirclose_r(reent_for(dt), dir);
     if (dir) {
         free(dir->dirStruct);
         free(dir);
