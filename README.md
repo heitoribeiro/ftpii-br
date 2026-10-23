@@ -12,7 +12,8 @@ is the unmodified original; every change since then is in the git history.
   without `QUIT` (Windows Explorer, scripts that time out) kept the 5 slots forever.
 - **No socket leak.** The passive listening socket is closed after every transfer.
 - **USB storage mounts by itself**, at start-up (waiting up to 12 s for a hard drive to spin up) and when
-  plugged in later. 0.0.22 only woke up the SD card, so a USB drive needed a manual remount with B.
+  plugged in later (polled every 15 s while absent; once mounted it stays mounted until B is
+  pressed, because re-probing a busy drive stalled the network). 0.0.22 only woke up the SD card.
 - **Colons allowed in file names**, so NAND saves such as `HP:OOTP` can be downloaded.
 - **Bilingual (Portuguese/English) status screen**: address, password, mounted devices, connections,
   current transfer and speed, and a short log instead of a scrolling console.

@@ -28,7 +28,7 @@
 #define CACHE_PAGES 16
 #define CACHE_SECTORS_PER_PAGE 64
 #define USB_BOOT_WAIT_SECONDS 12
-#define USB_POLL_SECONDS 4
+#define USB_POLL_SECONDS 15
 
 VIRTUAL_PARTITION VIRTUAL_PARTITIONS[] = {
     { "SD", "/sd", "sd", "sd:/", false, &__io_wiisd },
@@ -119,6 +119,10 @@ static void check_fat_device(VIRTUAL_PARTITION *partition, u64 now, u64 *timer, 
     if (now <= *timer) return;
     *timer = now + secs_to_ticks(interval);
     if (mounted(partition)) {
+        // A busy USB drive can report "not inserted" for a moment; unmounting and restarting USB
+        // for that stalled the IOS (and with it the network) during testing. USB stays mounted
+        // until B is pressed; only the SD card, whose check is a cheap register read, is watched.
+        if (partition == PA_USB) return;
         if (!partition->disc->isInserted()) {
             printf("%s removido / removed\n", partition->name);
             unmount(partition);
