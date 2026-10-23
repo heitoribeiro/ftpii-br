@@ -1,6 +1,11 @@
 // Copyright 2010 Joseph Jordan <joe.ftpii@psychlaw.com.au>
 // This code is licensed to you under the terms of the GNU GPL, version 2;
 // see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
+// Modified 2026 for ftpii BR:
+//  - static transfer buffers (the 32 KB stack buffers were close to the thread stack size),
+//  - up to four buffers moved per main-loop pass instead of one, so the loop overhead
+//    (controller polling, device checks, redraws) weighs less on throughput,
+//  - larger listen backlog, byte counting for the on-screen speed, bilingual messages.
 #include <errno.h>
 #include <gccore.h>
 #include <network.h>
@@ -10,30 +15,37 @@
 
 #include "net.h"
 #include "reset.h"
+#include "ui.h"
 
 #define MAX_NET_BUFFER_SIZE 32768
 #define MIN_NET_BUFFER_SIZE 4096
-#define FREAD_BUFFER_SIZE 32768
+#define FILE_BUFFER_SIZE 65536
+#define CHUNKS_PER_CALL 4
+#define LISTEN_BACKLOG 8
 
 static u32 NET_BUFFER_SIZE = MAX_NET_BUFFER_SIZE;
+static char file_buffer[FILE_BUFFER_SIZE] __attribute__((aligned(32)));
 
 void initialise_network() {
-    printf("Waiting for network to initialise...\n");
+    printf("Iniciando a rede... / Waiting for network...\n");
+    ui_set_ip(0);
+    ui_draw(true);
     s32 result = -1;
     while (!check_reset_synchronous() && result < 0) {
         while (!check_reset_synchronous() && (result = net_init()) == -EAGAIN);
-        if (result < 0) printf("net_init() failed: [%i] %s, retrying...\n", result, strerror(-result));
+        if (result < 0) printf("net_init() falhou / failed: [%i] %s\n", result, strerror(-result));
     }
     if (result >= 0) {
         u32 ip = 0;
         do {
             ip = net_gethostip();
-            if (!ip) printf("net_gethostip() failed, retrying...\n");
+            if (!ip) printf("Sem IP ainda / no IP yet, retrying...\n");
         } while (!check_reset_synchronous() && !ip);
         if (ip) {
             struct in_addr addr;
             addr.s_addr = ip;
-            printf("Network initialised.  Wii IP address: %s\n", inet_ntoa(addr));
+            printf("Rede pronta / Network ready: %s\n", inet_ntoa(addr));
+            ui_set_ip(ip);
         }
     }
 }
@@ -64,12 +76,12 @@ s32 create_server(u16 port) {
     s32 ret;
     if ((ret = net_bind(server, (struct sockaddr *)&bindAddress, sizeof(bindAddress))) < 0) {
         net_close(server);
-        printf("Error binding socket: [%i] %s\n", -ret, strerror(-ret));
+        printf("Erro no bind / bind error: [%i] %s\n", -ret, strerror(-ret));
         return ret;
     }
-    if ((ret = net_listen(server, 3)) < 0) {
+    if ((ret = net_listen(server, LISTEN_BACKLOG)) < 0) {
         net_close(server);
-        printf("Error listening on socket: [%i] %s\n", -ret, strerror(-ret));
+        printf("Erro no listen / listen error: [%i] %s\n", -ret, strerror(-ret));
         return ret;
     }
 
@@ -108,31 +120,33 @@ s32 send_exact(s32 s, char *buf, s32 length) {
     return transfer_exact(s, buf, length, (transferrer_type)net_write);
 }
 
+/*
+    Returns -EAGAIN while there is more to send, 0 when the file was sent completely,
+    or a negative error.
+*/
 s32 send_from_file(s32 s, FILE *f) {
-    char buf[FREAD_BUFFER_SIZE];
-    s32 bytes_read;
-    s32 result = 0;
-
-    bytes_read = fread(buf, 1, FREAD_BUFFER_SIZE, f);
-    if (bytes_read > 0) {
-        result = send_exact(s, buf, bytes_read);
-        if (result < 0) goto end;
-    }
-    if (bytes_read < FREAD_BUFFER_SIZE) {
-        result = -!feof(f);
-        goto end;
+    u32 chunk;
+    for (chunk = 0; chunk < CHUNKS_PER_CALL; chunk++) {
+        s32 bytes_read = fread(file_buffer, 1, FILE_BUFFER_SIZE, f);
+        if (bytes_read > 0) {
+            s32 result = send_exact(s, file_buffer, bytes_read);
+            if (result < 0) return result;
+            ui_count_bytes(bytes_read);
+        }
+        if (bytes_read < FILE_BUFFER_SIZE) return -!feof(f);
     }
     return -EAGAIN;
-    end:
-    return result;
 }
 
+/*
+    Returns -EAGAIN while the connection is open but has no data right now,
+    0 at end of file, or a negative error.
+*/
 s32 recv_to_file(s32 s, FILE *f) {
-    char buf[NET_BUFFER_SIZE];
-    s32 bytes_read;
-    while (1) {
-        try_again_with_smaller_buffer:
-        bytes_read = net_read(s, buf, NET_BUFFER_SIZE);
+    u32 chunk;
+    for (chunk = 0; chunk < CHUNKS_PER_CALL * 2; chunk++) {
+        try_again_with_smaller_buffer:;
+        s32 bytes_read = net_read(s, file_buffer, NET_BUFFER_SIZE);
         if (bytes_read < 0) {
             if (bytes_read == -EINVAL && NET_BUFFER_SIZE == MAX_NET_BUFFER_SIZE) {
                 NET_BUFFER_SIZE = MIN_NET_BUFFER_SIZE;
@@ -143,7 +157,9 @@ s32 recv_to_file(s32 s, FILE *f) {
             return 0;
         }
 
-        s32 bytes_written = fwrite(buf, 1, bytes_read, f);
+        s32 bytes_written = fwrite(file_buffer, 1, bytes_read, f);
         if (bytes_written < bytes_read) return -1;
+        ui_count_bytes(bytes_read);
     }
+    return -EAGAIN;
 }

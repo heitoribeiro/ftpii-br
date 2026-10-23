@@ -1,12 +1,15 @@
 // Copyright 2010 Joseph Jordan <joe.ftpii@psychlaw.com.au>
 // This code is licensed to you under the terms of the GNU GPL, version 2;
 // see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
+// Modified 2026 for ftpii BR: colons are allowed in file names (some Wii saves use them).
 #include <errno.h>
 #include <malloc.h>
 #include <stdarg.h>
 #include <string.h>
-#include <sys/dir.h>
+#include <sys/stat.h>
 #include <unistd.h>
+
+#include "compat.h"
 
 #include "fs.h"
 #include "vrt.h"
@@ -87,9 +90,8 @@ static char *virtual_abspath(char *virtual_cwd, char *virtual_path) {
 */
 char *to_real_path(char *virtual_cwd, char *virtual_path) {
     errno = ENOENT;
-    if (strchr(virtual_path, ':')) {
-        return NULL; // colon is not allowed in virtual path, i've decided =P
-    }
+    // The device always comes from the first path component (the alias table below),
+    // so a colon further on is just part of a file name and is safe to pass through.
 
     virtual_path = virtual_abspath(virtual_cwd, virtual_path);
     if (!virtual_path) return NULL;

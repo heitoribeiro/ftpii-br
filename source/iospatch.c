@@ -1,6 +1,8 @@
 // Copyright 2010 Joseph Jordan <joe.ftpii@psychlaw.com.au>
 // This code is licensed to you under the terms of the GNU GPL, version 2;
 // see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
+// Modified 2026 for ftpii BR: only the in-memory ISFS read-permission patch is applied
+// (the DVD read-limit patch was dropped with DVD support). Nothing is written to the NAND.
 #include <gccore.h>
 #include <ogc/machine/processor.h>
 
@@ -30,20 +32,6 @@ static bool apply_patch(char *name, u32 start, const u32 *old, const u32 *new, u
     return true;
 }
 
-static const u32 di_readlimit_start = 0x139b66d8;
-static const u32 di_readlimit_old[] = {
-    0x00000000, 0x00000000, 0x00000000,
-    0x00014000, 0x00000000, 0x460a0000, 
-    0x00000000, 0x00000008, 0x00000000,
-    0x7ed40000, 0x00000000, 0x00000008
-};
-static const u32 di_readlimit_new[] = {
-    0x00000000, 0x00000000, 0x00000000,
-    0x7ed44000, 0x00000000, 0x460a0000, 
-    0x00000000, 0x00000008, 0x00000000,
-    0x7ed40000, 0x00000000, 0x00000008
-};
-
 static const u32 isfs_permissions_start = 0x13a11304;
 const u32 isfs_permissions_old[] = { 0x428bd001, 0x2566426d };
 const u32 isfs_permissions_new[] = { 0x428be001, 0x2566426d };
@@ -52,7 +40,6 @@ u32 IOSPATCH_Apply() {
     u32 patches = 0;
     if (have_ahbprot()) {
         disable_memory_protection();
-        patches += apply_patch("di_readlimit", di_readlimit_start, di_readlimit_old, di_readlimit_new, sizeof(di_readlimit_old) >> 2);
         patches += apply_patch("isfs_permissions", isfs_permissions_start, isfs_permissions_old, isfs_permissions_new, sizeof(isfs_permissions_old) >> 2);
     }
     return patches;

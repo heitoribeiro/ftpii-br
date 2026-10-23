@@ -1,9 +1,11 @@
 // Copyright 2010 Joseph Jordan <joe.ftpii@psychlaw.com.au>
 // This code is licensed to you under the terms of the GNU GPL, version 2;
 // see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
+// Modified 2026 for ftpii BR: DVD, NTFS, NAND-image and SD Gecko devices removed; globals made extern.
 #ifndef _FS_H_
 #define _FS_H_
 
+#include <gctypes.h>
 #include <ogc/disc_io.h>
 
 typedef struct {
@@ -12,23 +14,16 @@ typedef struct {
     const char *mount_point;
     const char *prefix;
     bool inserted;
-    bool geckofail;
     const DISC_INTERFACE *disc;
 } VIRTUAL_PARTITION;
 
-VIRTUAL_PARTITION VIRTUAL_PARTITIONS[11];
-const u32 MAX_VIRTUAL_PARTITIONS;
-VIRTUAL_PARTITION *PA_GCSDA;
-VIRTUAL_PARTITION *PA_GCSDB;
-VIRTUAL_PARTITION *PA_SD;
-VIRTUAL_PARTITION *PA_USB;
-VIRTUAL_PARTITION *PA_DVD;
-VIRTUAL_PARTITION *PA_WOD;
-VIRTUAL_PARTITION *PA_FST;
-VIRTUAL_PARTITION *PA_NAND;
-VIRTUAL_PARTITION *PA_ISFS;
-VIRTUAL_PARTITION *PA_OTP;
-VIRTUAL_PARTITION *PA_SEEPROM;
+extern VIRTUAL_PARTITION VIRTUAL_PARTITIONS[];
+extern const u32 MAX_VIRTUAL_PARTITIONS;
+extern VIRTUAL_PARTITION *PA_SD;
+extern VIRTUAL_PARTITION *PA_USB;
+extern VIRTUAL_PARTITION *PA_ISFS;
+extern VIRTUAL_PARTITION *PA_OTP;
+extern VIRTUAL_PARTITION *PA_SEEPROM;
 
 void initialise_fs();
 
@@ -44,11 +39,7 @@ bool unmount_virtual(const char *dir);
 
 void check_removable_devices(u64 now);
 
-void process_remount_event();
-
-void process_device_select_event(u32 pressed);
-
-void check_mount_timer(u64 now);
+void remount_storage();
 
 char *dirname(char *path);
 

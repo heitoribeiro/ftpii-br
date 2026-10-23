@@ -5,7 +5,9 @@
 #define _VRT_H_
 
 #include <stdio.h>
-#include <sys/dir.h>
+#include <sys/stat.h>
+
+#include "compat.h"
 
 char *to_real_path(char *virtual_cwd, char *virtual_path);
 

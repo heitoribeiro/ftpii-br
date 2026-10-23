@@ -1,6 +1,7 @@
 // Copyright 2010 Joseph Jordan <joe.ftpii@psychlaw.com.au>
 // This code is licensed to you under the terms of the GNU GPL, version 2;
 // see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
+// Modified 2026 for ftpii BR: builds with current newlib (struct stat no longer has st_spare fields).
 #include <errno.h>
 #include <ogc/isfs.h>
 #include <ogc/lwp_watchdog.h>
@@ -8,7 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/dir.h>
+#include <sys/stat.h>
 #include <sys/iosupport.h>
 
 #include "isfs.h"
@@ -186,6 +187,7 @@ static off_t _ISFS_seek_r(struct _reent *r, int fd, off_t pos, int dir) {
 }
 
 static void stat_entry(DIR_ENTRY *entry, struct stat *st) {
+    memset(st, 0, sizeof(*st));
     st->st_dev = 0x4957;
     st->st_ino = 0;
     st->st_mode = ((is_dir(entry)) ? S_IFDIR : S_IFREG) | (S_IRUSR | S_IRGRP | S_IROTH);
@@ -195,15 +197,10 @@ static void stat_entry(DIR_ENTRY *entry, struct stat *st) {
     st->st_rdev = st->st_dev;
     st->st_size = entry->size;
     st->st_atime = 0;
-    st->st_spare1 = 0;
     st->st_mtime = 0;
-    st->st_spare2 = 0;
     st->st_ctime = 0;
-    st->st_spare3 = 0;
     st->st_blksize = SECTOR_SIZE;
     st->st_blocks = (entry->size + SECTOR_SIZE - 1) / SECTOR_SIZE;
-    st->st_spare4[0] = 0;
-    st->st_spare4[1] = 0;
 }
 
 static int _ISFS_fstat_r(struct _reent *r, int fd, struct stat *st) {
