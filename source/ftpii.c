@@ -93,8 +93,12 @@ int main(int argc, char **argv) {
         if (network_down) {
             net_close(server);
             initialise_network();
+            diag.network_restarts++;
             server = create_server(PORT);
-            if (server < 0) continue;
+            if (server < 0) {
+                sleep(1);
+                continue;
+            }
             printf("Pronto na porta / Listening on port %u\n", PORT);
             network_down = false;
         }

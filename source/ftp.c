@@ -580,13 +580,15 @@ static s32 ftp_SITE_INFO(client_t *client, char *rest) {
         " ISFS_Initialize: %d\r\n"
         " ISFS mounted: %s, entries: %u, permission-denied dirs: %u\r\n"
         " Devices: sd=%s usb=%s\r\n"
-        " Clients: %u/%u\r\n"
+        " Clients: %u/%u, max at once: %u\r\n"
+        " accept() errors: %u (last %d), network restarts: %u\r\n"
         "211 End\r\n",
         FTPII_BR_NAME, diag.ios_version, diag.ios_revision, diag.ahbprot ? "yes" : "no",
         diag.patches_applied, diag.es_identify, diag.isfs_initialize,
         diag.isfs_mounted ? "yes" : "no", diag.isfs_entries, diag.isfs_unreadable_dirs,
         mounted(PA_SD) ? "mounted" : "no", mounted(PA_USB) ? "mounted" : "no",
-        num_clients, MAX_CLIENTS);
+        num_clients, MAX_CLIENTS, diag.max_clients_seen,
+        diag.accept_errors, diag.last_accept_error, diag.network_restarts);
     return write_raw(client, text);
 }
 
@@ -766,8 +768,15 @@ static bool process_accept_events(s32 server) {
     socklen_t addrlen = sizeof(client_address);
     while ((peer = net_accept(server, (struct sockaddr *)&client_address, &addrlen)) != -EAGAIN) {
         if (peer < 0) {
-            printf("Erro ao aceitar / accept error: [%i] %s\n", -peer, strerror(-peer));
-            return false;
+            // In ftpii 0.0.22 any accept() error tore the whole network down and re-created the
+            // listening socket while clients were still connected; re-binding port 21 then failed
+            // and the server stopped accepting for good. Treat it as transient unless the Wii has
+            // actually lost its address.
+            diag.accept_errors++;
+            diag.last_accept_error = peer;
+            if (diag.accept_errors == 1 || diag.accept_errors % 50 == 0)
+                printf("Erro ao aceitar / accept error: [%i] %s (x%u)\n", -peer, strerror(-peer), diag.accept_errors);
+            return net_gethostip() != 0;
         }
 
         if (num_clients == MAX_CLIENTS && !evict_idle_client(gettime())) {
@@ -812,6 +821,7 @@ static bool process_accept_events(s32 server) {
                 }
             }
             num_clients++;
+            if (num_clients > diag.max_clients_seen) diag.max_clients_seen = num_clients;
             printf("Conectado / Connected: %s\n", inet_ntoa(client_address.sin_addr));
             ui_set_clients(num_clients, MAX_CLIENTS);
         }

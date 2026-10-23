@@ -15,6 +15,10 @@ typedef struct {
     bool isfs_mounted;
     u32 isfs_entries;
     u32 isfs_unreadable_dirs;
+    u32 accept_errors;
+    s32 last_accept_error;
+    u32 network_restarts;
+    u32 max_clients_seen;
 } diag_t;
 
 extern diag_t diag;
