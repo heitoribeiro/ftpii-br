@@ -99,7 +99,7 @@ static int _SEEPROM_open_r(struct _reent *r, void *fileStruct, const char *path,
     return (int)file;
 }
 
-static int _SEEPROM_close_r(struct _reent *r, int fd) {
+static int _SEEPROM_close_r(struct _reent *r, void *fd) {
     FILE_STRUCT *file = (FILE_STRUCT *)fd;
     if (!file->inUse) {
         r->_errno = EBADF;
@@ -109,7 +109,7 @@ static int _SEEPROM_close_r(struct _reent *r, int fd) {
     return 0;
 }
 
-static int _SEEPROM_read_r(struct _reent *r, int fd, char *ptr, size_t len) {
+static ssize_t _SEEPROM_read_r(struct _reent *r, void *fd, char *ptr, size_t len) {
     FILE_STRUCT *file = (FILE_STRUCT *)fd;
     if (!file->inUse) {
         r->_errno = EBADF;
@@ -132,7 +132,7 @@ static int _SEEPROM_read_r(struct _reent *r, int fd, char *ptr, size_t len) {
     return len;
 }
 
-static off_t _SEEPROM_seek_r(struct _reent *r, int fd, off_t pos, int dir) {
+static off_t _SEEPROM_seek_r(struct _reent *r, void *fd, off_t pos, int dir) {
     FILE_STRUCT *file = (FILE_STRUCT *)fd;
     if (!file->inUse) {
         r->_errno = EBADF;
@@ -188,7 +188,7 @@ static void stat_entry(DIR_ENTRY *entry, struct stat *st) {
     st->st_blocks = (entry->size + BLOCK_SIZE - 1) / BLOCK_SIZE;
 }
 
-static int _SEEPROM_fstat_r(struct _reent *r, int fd, struct stat *st) {
+static int _SEEPROM_fstat_r(struct _reent *r, void *fd, struct stat *st) {
     FILE_STRUCT *file = (FILE_STRUCT *)fd;
     if (!file->inUse) {
         r->_errno = EBADF;

@@ -200,8 +200,8 @@ static s32 ftp_TYPE(client_t *client, char *rest) {
     } else {
         return write_reply(client, 501, "Syntax error in parameters.");
     }
-    char msg[15];
-    sprintf(msg, "Type set to %s.", representation_type);
+    char msg[32];
+    snprintf(msg, sizeof(msg), "Type set to %s.", representation_type);
     return write_reply(client, 200, msg);
 }
 
