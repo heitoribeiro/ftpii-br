@@ -31,7 +31,10 @@ is the unmodified original; every change since then is in the git history.
 ## PC tools and field notes
 
 - [`tools/`](tools/README.md): Python scripts for the PC side, to find the Wii and copy files, extract a
-  file from a game on the Wii's USB drive over FTP, and capture what an online game does on the network.
+  file from a game on the Wii's USB drive over FTP, capture what an online game does on the network, set
+  up WiiFlow as an emulator hub with covers, patch online games for Wiimmfi and translate game text.
+- Wii Menu channels: [heitoribeiro/wii-forwarder](https://github.com/heitoribeiro/wii-forwarder)
+  (forwarder plus the tools that build and validate channel WADs).
 - [`docs/NOTES.md`](docs/NOTES.md): what we found getting a Wii fully working in 2026, including Mario Kart
   Wii online through WiiFlow when USB Loader GX hangs at "Connecting", Wiimmfi error 23917, WiiFlow cover
   crashes and Wii Menu freezes with forwarder channels (English, with a Portuguese summary).
