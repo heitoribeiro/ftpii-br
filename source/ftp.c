@@ -570,26 +570,16 @@ static s32 ftp_SITE_UNMOUNT(client_t *client, char *path) {
 static s32 ftp_SITE_INFO(client_t *client, char *rest) {
     char text[640];
     snprintf(text, sizeof(text),
-        "211-%s
-"
-        " IOS: %d rev %d
-"
-        " AHBPROT: %s
-"
-        " IOS patches applied: %u
-"
-        " ES_Identify: %d
-"
-        " ISFS_Initialize: %d
-"
-        " ISFS mounted: %s, entries: %u, permission-denied dirs: %u
-"
-        " Devices: sd=%s usb=%s
-"
-        " Clients: %u/%u
-"
-        "211 End
-",
+        "211-%s\r\n"
+        " IOS: %d rev %d\r\n"
+        " AHBPROT: %s\r\n"
+        " IOS patches applied: %u\r\n"
+        " ES_Identify: %d\r\n"
+        " ISFS_Initialize: %d\r\n"
+        " ISFS mounted: %s, entries: %u, permission-denied dirs: %u\r\n"
+        " Devices: sd=%s usb=%s\r\n"
+        " Clients: %u/%u\r\n"
+        "211 End\r\n",
         FTPII_BR_NAME, diag.ios_version, diag.ios_revision, diag.ahbprot ? "yes" : "no",
         diag.patches_applied, diag.es_identify, diag.isfs_initialize,
         diag.isfs_mounted ? "yes" : "no", diag.isfs_entries, diag.isfs_unreadable_dirs,
