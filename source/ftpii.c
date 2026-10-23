@@ -5,8 +5,11 @@
 // B remounts both storage devices, HOME also exits, DVD support removed,
 // password also read from an "ftpiibr_<password>" app folder.
 #include <network.h>
+#include <ogc/system.h>
 #include <ogc/isfs.h>
 #include <ogc/lwp_watchdog.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <wiiuse/wpad.h>
@@ -77,6 +80,21 @@ static void initialise_ftpii(int argc, char **argv) {
     initialise_fs();
 }
 
+// Exit used to freeze after "Exiting..." with nothing on screen to say where. Each step is now shown
+// and appended to sd:/ftpiibr_saida.txt (read it back over FTP next time) while the SD is still mounted.
+#define EXIT_LOG "sd:/ftpiibr_saida.txt"
+
+static void exit_step(const char *step) {
+    printf("Saindo / Exiting: %s\n", step);
+    ui_draw(true);
+    if (!PA_SD->inserted) return;
+    FILE *f = fopen(EXIT_LOG, "a");
+    if (f) {
+        fprintf(f, "%s %s\n", FTPII_BR_VERSION, step);
+        fclose(f);
+    }
+}
+
 static void process_buttons() {
     u32 wii = check_wiimote(WPAD_BUTTON_A | WPAD_BUTTON_HOME | WPAD_BUTTON_B);
     u32 gc = check_gamecube(PAD_BUTTON_A | PAD_BUTTON_START | PAD_BUTTON_B);
@@ -123,15 +141,27 @@ int main(int argc, char **argv) {
         check_removable_devices(gettime());
         ui_draw(false);
     }
-    ui_draw(true);
+    exit_step("fechando conexoes / closing connections");
     cleanup_ftp();
     net_close(server);
-
-    u32 i;
-    for (i = 0; i < MAX_VIRTUAL_PARTITIONS; i++) unmount(VIRTUAL_PARTITIONS + i);
-
+    exit_step("desligando a rede / network off");
+    net_deinit();
+    exit_step("NAND, OTP, SEEPROM");
+    unmount(PA_ISFS);
+    unmount(PA_OTP);
+    unmount(PA_SEEPROM);
     ISFS_Deinitialize();
+    exit_step("WPAD");
+    WPAD_Shutdown();
+    exit_step("USB");
+    unmount(PA_USB);
+    exit_step("SD (ultimo passo antes de sair / last step before leaving)");
+    unmount(PA_SD);
 
     maybe_poweroff();
+    // Leave explicitly: back to the Homebrew Channel through its stub, or to the Wii Menu without one.
+    if (*(vu32 *)0x80001804 == 0x53545542 && *(vu32 *)0x80001808 == 0x48415858) // "STUBHAXX"
+        exit(0);
+    SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
     return 0;
 }
