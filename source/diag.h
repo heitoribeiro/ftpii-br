@@ -19,6 +19,7 @@ typedef struct {
     s32 last_accept_error;
     u32 network_restarts;
     u32 max_clients_seen;
+    u32 listener_refreshes;
 } diag_t;
 
 extern diag_t diag;

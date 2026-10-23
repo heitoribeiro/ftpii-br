@@ -581,14 +581,14 @@ static s32 ftp_SITE_INFO(client_t *client, char *rest) {
         " ISFS mounted: %s, entries: %u, permission-denied dirs: %u\r\n"
         " Devices: sd=%s usb=%s\r\n"
         " Clients: %u/%u, max at once: %u\r\n"
-        " accept() errors: %u (last %d), network restarts: %u\r\n"
+        " accept() errors: %u (last %d), network restarts: %u, listener refreshes: %u\r\n"
         "211 End\r\n",
         FTPII_BR_NAME, diag.ios_version, diag.ios_revision, diag.ahbprot ? "yes" : "no",
         diag.patches_applied, diag.es_identify, diag.isfs_initialize,
         diag.isfs_mounted ? "yes" : "no", diag.isfs_entries, diag.isfs_unreadable_dirs,
         mounted(PA_SD) ? "mounted" : "no", mounted(PA_USB) ? "mounted" : "no",
         num_clients, MAX_CLIENTS, diag.max_clients_seen,
-        diag.accept_errors, diag.last_accept_error, diag.network_restarts);
+        diag.accept_errors, diag.last_accept_error, diag.network_restarts, diag.listener_refreshes);
     return write_raw(client, text);
 }
 
@@ -952,6 +952,10 @@ static void process_control_events(client_t *client) {
 
     recv_loop_end:
     cleanup_client(client);
+}
+
+u32 ftp_client_count() {
+    return num_clients;
 }
 
 bool process_ftp_events(s32 server) {

@@ -7,6 +7,7 @@
 void accept_ftp_client(s32 server);
 void set_ftp_password(char *new_password);
 bool process_ftp_events(s32 server);
+u32 ftp_client_count();
 void cleanup_ftp();
 
 #endif /* _FTP_H_ */

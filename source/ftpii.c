@@ -24,6 +24,10 @@
 diag_t diag;
 
 static const u16 PORT = 21;
+// On hardware the IOS stopped handing new connections to the listening socket after a few
+// simultaneous clients, and it stayed that way after they left. Re-creating the listening socket
+// while nobody is connected brings it back, so do that periodically when idle.
+#define LISTENER_REFRESH_SECS 30
 static const char *APP_DIR_PREFIXES[] = { "ftpiibr_", "ftpii_", NULL };
 
 static void initialise_video() {
@@ -89,6 +93,7 @@ int main(int argc, char **argv) {
 
     bool network_down = true;
     s32 server = -1;
+    u64 listener_since = 0;
     while (!reset()) {
         if (network_down) {
             net_close(server);
@@ -101,6 +106,17 @@ int main(int argc, char **argv) {
             }
             printf("Pronto na porta / Listening on port %u\n", PORT);
             network_down = false;
+            listener_since = gettime();
+        }
+        if (ftp_client_count() == 0 && diff_sec(listener_since, gettime()) >= LISTENER_REFRESH_SECS) {
+            net_close(server);
+            server = create_server(PORT);
+            diag.listener_refreshes++;
+            listener_since = gettime();
+            if (server < 0) {
+                network_down = true;
+                continue;
+            }
         }
         network_down = process_ftp_events(server);
         process_buttons();
