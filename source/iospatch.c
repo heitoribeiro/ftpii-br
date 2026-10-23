@@ -1,10 +1,14 @@
 // Copyright 2010 Joseph Jordan <joe.ftpii@psychlaw.com.au>
 // This code is licensed to you under the terms of the GNU GPL, version 2;
 // see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
-// Modified 2026 for ftpii BR: only the in-memory ISFS read-permission patch is applied
-// (the DVD read-limit patch was dropped with DVD support). Nothing is written to the NAND.
+// Modified 2026 for ftpii BR: the ISFS permission check is now located by searching IOS memory for
+// its byte pattern, as runtimeiospatch does (USB Loader GX; Joseph Jordan, damysteryman,
+// Christopher Bratusek, DarkMatterCore, megazig, FIX94 - GPLv2), instead of the fixed address used
+// in 2010, which no longer matched. Only this one in-memory patch is applied (it is lost at power
+// off); the DVD read-limit patch was dropped with DVD support. Nothing is written to the NAND.
 #include <gccore.h>
 #include <ogc/machine/processor.h>
+#include <string.h>
 
 #include "iospatch.h"
 
@@ -18,29 +22,28 @@ static void disable_memory_protection() {
     write32(MEM_PROT, read32(MEM_PROT) & 0x0000FFFF);
 }
 
-static bool apply_patch(char *name, u32 start, const u32 *old, const u32 *new, u32 words) {
-    u32 i;
-    for (i = 0; i < words; i++) {
-        u32 val = read32(start + (i << 2));
-        if (val != old[i]) {
-            return false;
+// Thumb code of the ISFS permission check: "beq" (0xD0) becomes an unconditional branch (0xE0).
+static const u8 isfs_permissions_old[] = { 0x42, 0x8B, 0xD0, 0x01, 0x25, 0x66 };
+static const u8 isfs_permissions_new[] = { 0x42, 0x8B, 0xE0, 0x01, 0x25, 0x66 };
+
+static u32 apply_patch(const u8 *old, u32 old_size, const u8 *patch, u32 patch_size) {
+    u8 *ptr = (u8 *)*((u32 *)0x80003134);   // start of the IOS area in MEM2
+    u8 *end = (u8 *)0x94000000;
+    u32 found = 0;
+    while (ptr < end - old_size) {
+        if (!memcmp(ptr, old, old_size)) {
+            memcpy(ptr, patch, patch_size);
+            DCFlushRange((u8 *)(((u32)ptr) >> 5 << 5), (patch_size >> 5 << 5) + 64);
+            ICInvalidateRange((u8 *)(((u32)ptr) >> 5 << 5), (patch_size >> 5 << 5) + 64);
+            found++;
         }
+        ptr++;
     }
-    for (i = 0; i < words; i++) {
-        write32(start + (i << 2), new[i]);
-    }
-    return true;
+    return found;
 }
 
-static const u32 isfs_permissions_start = 0x13a11304;
-const u32 isfs_permissions_old[] = { 0x428bd001, 0x2566426d };
-const u32 isfs_permissions_new[] = { 0x428be001, 0x2566426d };
-
 u32 IOSPATCH_Apply() {
-    u32 patches = 0;
-    if (have_ahbprot()) {
-        disable_memory_protection();
-        patches += apply_patch("isfs_permissions", isfs_permissions_start, isfs_permissions_old, isfs_permissions_new, sizeof(isfs_permissions_old) >> 2);
-    }
-    return patches;
+    if (!have_ahbprot()) return 0;
+    disable_memory_protection();
+    return apply_patch(isfs_permissions_old, sizeof(isfs_permissions_old), isfs_permissions_new, sizeof(isfs_permissions_new));
 }
